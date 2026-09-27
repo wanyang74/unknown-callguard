@@ -1,0 +1,9 @@
+.venv/
+.env
+*.db
+__pycache__/
+.pytest_cache/
+.DS_Store
+# Personal copies: real phone numbers, status notes and screening rules. Never publish.
+CLAUDE.local.md
+rules.local.md

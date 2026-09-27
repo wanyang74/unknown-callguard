@@ -1,0 +1,11 @@
+# Explicit so the build context never falls back to .gitignore: rules.local.md must be
+# shipped to the server, while secrets and local state must not.
+.venv/
+.env
+*.db
+__pycache__/
+.pytest_cache/
+.DS_Store
+tests/
+CLAUDE.md
+CLAUDE.local.md

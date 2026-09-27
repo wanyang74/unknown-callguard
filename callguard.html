@@ -1,0 +1,311 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CallGuard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75,600;75,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#f2f4f3; --surface:#ffffff; --ink:#16202b; --muted:#5b6874; --line:#c9d1d6;
+  --soft:#e6eaec; --allow:#1d7f55; --allow-bg:#e3f2ea; --block:#b8412c; --block-bg:#f7e5e0;
+  --accent:#2a5d8f;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#11171d; --surface:#18212a; --ink:#e4eaee; --muted:#93a1ad; --line:#34424f;
+    --soft:#1f2a34; --allow:#4cc08a; --allow-bg:#163226; --block:#ee7a62; --block-bg:#3a1f1a;
+    --accent:#7fb0e0;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#11171d; --surface:#18212a; --ink:#e4eaee; --muted:#93a1ad; --line:#34424f;
+  --soft:#1f2a34; --allow:#4cc08a; --allow-bg:#163226; --block:#ee7a62; --block-bg:#3a1f1a;
+  --accent:#7fb0e0;
+}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 "IBM Plex Sans",system-ui,sans-serif;padding-inline:16px}
+.wrap{max-width:900px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:48px}
+h1,h2{font-family:"Archivo","Arial Narrow",system-ui,sans-serif;font-stretch:75%;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:clamp(40px,8vw,64px);font-weight:800;line-height:1}
+h2{font-size:26px;font-weight:600;line-height:1.15}
+h3{font-size:15px;margin:0 0 4px}
+p{margin:0;max-width:68ch}
+.lede{font-size:18px;color:var(--muted);max-width:60ch}
+header{display:flex;flex-direction:column;gap:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:500 12px/1 "IBM Plex Mono",ui-monospace,monospace;padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.chip.ok{color:var(--allow);border-color:currentColor}
+.chip.warn{color:var(--block);border-color:currentColor}
+section{display:flex;flex-direction:column;gap:16px}
+.label{font:500 11px/1 "IBM Plex Mono",ui-monospace,monospace;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.scroll{overflow-x:auto}
+figure svg{display:block;width:100%;min-width:640px;height:auto;color:var(--ink)}
+figcaption{color:var(--muted);font-size:14px;max-width:70ch}
+.dg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.dg .box.pain{fill:var(--block-bg);stroke:var(--block)}
+.dg .box.block{fill:var(--block-bg);stroke:var(--block)}
+.dg .box.allow{fill:var(--allow-bg);stroke:var(--allow)}
+.dg .box.brain{fill:var(--soft);stroke:var(--accent);stroke-width:2}
+.dg .t{font:600 13px "IBM Plex Sans",sans-serif;fill:var(--ink)}
+.dg .s{font:400 11.5px "IBM Plex Sans",sans-serif;fill:var(--muted)}
+.dg .e{font:500 11px "IBM Plex Mono",monospace;fill:var(--muted)}
+.dg .e.block{fill:var(--block)} .dg .e.allow{fill:var(--allow)}
+.dg .edge{stroke:var(--muted);stroke-width:1.5;fill:none}
+.dg .edge.block{stroke:var(--block)} .dg .edge.allow{stroke:var(--allow)}
+.dg .head{fill:var(--muted)} .dg .head.block{fill:var(--block)} .dg .head.allow{fill:var(--allow)}
+.dg .new{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:5 4}
+.dg .newlbl{font:500 11px "IBM Plex Mono",monospace;fill:var(--accent)}
+.tl .speech{fill:var(--soft);stroke:var(--line);stroke-width:1.5}
+.tl .prompt{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.tl .think{fill:var(--surface);stroke:var(--accent);stroke-width:2}
+.tl .wait{fill:var(--block-bg);stroke:var(--block);stroke-width:1.5}
+.tl .ok{fill:var(--allow-bg);stroke:var(--allow);stroke-width:1.5}
+.tl .lane{font:600 13px "IBM Plex Sans",sans-serif;fill:var(--ink)}
+.tl .sub{font:400 11px "IBM Plex Mono",monospace;fill:var(--muted)}
+.tl .blab{font:500 11px "IBM Plex Sans",sans-serif;fill:var(--ink)}
+.tl .tick{font:500 10px "IBM Plex Mono",monospace;fill:var(--muted)}
+.tl .axis{stroke:var(--line);stroke-width:1.5}
+.tl .mark{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:5 4}
+.tl .marklab{font:500 11px "IBM Plex Mono",monospace;fill:var(--accent)}
+.tl .verdict{font:500 11px "IBM Plex Sans",sans-serif}
+.tl .verdict.bad{fill:var(--block)} .tl .verdict.good{fill:var(--allow)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{font:500 11px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+td:first-child{font-weight:600;white-space:nowrap}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.tablebox tr:last-child td{border-bottom:0}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px}
+code{background:var(--soft);padding:1px 5px;border-radius:4px}
+ol.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:14px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:32px 1fr;gap:12px}
+ol.steps li::before{content:counter(s);font:800 22px/1.1 "Archivo",sans-serif;font-stretch:75%;color:var(--accent)}
+.codes{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin-top:8px;align-items:baseline}
+.codes code{white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 32px}
+.grid2 div{border-top:2px solid var(--line);padding-top:10px}
+.muted{color:var(--muted)}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="label">Personal call screening · iPhone + US Mobile</span>
+    <h1>CallGuard</h1>
+    <p class="lede">Answers unknown callers, asks why they're calling, and hangs up on sales and spam. Everyone else rings straight through, and you hear who it is and why before you say hello.</p>
+    <div class="chips">
+      <span class="chip ok">Built</span>
+      <span class="chip ok">16 / 16 tests pass</span>
+      <span class="chip">Starts in shadow mode</span>
+      <span class="chip warn">Not yet tried on a real call</span>
+    </div>
+  </header>
+
+  <section>
+    <span class="label">Before</span>
+    <h2>Apple asks the question, but every call still lands on you</h2>
+    <figure>
+      <div class="scroll">
+      <svg class="dg" viewBox="0 0 880 124" role="img" aria-label="Before: an unknown call is answered by Apple's screener, which asks for a reason and shows you the transcript. You must decide on every call.">
+        <rect class="box" x="10" y="30" width="148" height="64" rx="6"/>
+        <text class="t" x="84" y="58" text-anchor="middle">Unknown caller</text>
+        <text class="s" x="84" y="76" text-anchor="middle">dials your number</text>
+
+        <rect class="box" x="186" y="30" width="148" height="64" rx="6"/>
+        <text class="t" x="260" y="58" text-anchor="middle">iPhone</text>
+        <text class="s" x="260" y="76" text-anchor="middle">"Ask Reason for Calling"</text>
+
+        <rect class="box" x="362" y="30" width="148" height="64" rx="6"/>
+        <text class="t" x="436" y="58" text-anchor="middle">Apple's screener</text>
+        <text class="s" x="436" y="76" text-anchor="middle">"Name and reason?"</text>
+
+        <rect class="box" x="538" y="30" width="148" height="64" rx="6"/>
+        <text class="t" x="612" y="58" text-anchor="middle">Transcript</text>
+        <text class="s" x="612" y="76" text-anchor="middle">shown on your screen</text>
+
+        <rect class="box pain" x="714" y="30" width="156" height="64" rx="6"/>
+        <text class="t" x="792" y="58" text-anchor="middle">You decide</text>
+        <text class="s" x="792" y="76" text-anchor="middle">on every single call</text>
+
+        <g>
+          <line class="edge" x1="158" y1="62" x2="180" y2="62"/><polygon class="head" points="186,62 178,57 178,67"/>
+          <line class="edge" x1="334" y1="62" x2="356" y2="62"/><polygon class="head" points="362,62 354,57 354,67"/>
+          <line class="edge" x1="510" y1="62" x2="532" y2="62"/><polygon class="head" points="538,62 530,57 530,67"/>
+          <line class="edge" x1="686" y1="62" x2="708" y2="62"/><polygon class="head" points="714,62 706,57 706,67"/>
+        </g>
+        <text class="e block" x="776" y="116" text-anchor="middle">no API for apps to step in here</text>
+      </svg>
+      </div>
+      <figcaption>iOS never shares the screening transcript with other apps and never lets them end a call, so nothing can make the decision for you at this point.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <span class="label">After</span>
+    <h2>Your own screener decides first, and only real calls reach you</h2>
+    <figure>
+      <div class="scroll">
+      <svg class="dg" viewBox="0 0 904 310" role="img" aria-label="After: unknown calls are silenced and forwarded by US Mobile to a Twilio number. CallGuard asks for a reason and Claude checks it against your rules. Sales and spam get a polite goodbye and a hang-up. Everything else rings your iPhone with a spoken summary, or goes to voicemail.">
+        <rect class="new" x="532" y="14" width="342" height="224" rx="10"/>
+        <text class="newlbl" x="866" y="32" text-anchor="end">NEW · runs in the cloud</text>
+
+        <rect class="box" x="10" y="44" width="148" height="64" rx="6"/>
+        <text class="t" x="84" y="72" text-anchor="middle">Unknown caller</text>
+        <text class="s" x="84" y="90" text-anchor="middle">dials your number</text>
+
+        <rect class="box" x="186" y="44" width="148" height="64" rx="6"/>
+        <text class="t" x="260" y="72" text-anchor="middle">iPhone</text>
+        <text class="s" x="260" y="90" text-anchor="middle">silences unknowns</text>
+
+        <rect class="box" x="370" y="44" width="148" height="64" rx="6"/>
+        <text class="t" x="444" y="72" text-anchor="middle">US Mobile</text>
+        <text class="s" x="444" y="90" text-anchor="middle">forwards the call</text>
+
+        <rect class="box" x="546" y="44" width="148" height="64" rx="6"/>
+        <text class="t" x="620" y="72" text-anchor="middle">CallGuard</text>
+        <text class="s" x="620" y="90" text-anchor="middle">"Name and reason?"</text>
+
+        <rect class="box brain" x="714" y="44" width="148" height="64" rx="6"/>
+        <text class="t" x="788" y="66" text-anchor="middle">Claude</text>
+        <text class="s" x="788" y="82" text-anchor="middle">checks your rules</text>
+        <text class="s" x="788" y="98" text-anchor="middle">starts mid-sentence</text>
+
+        <line class="edge" x1="158" y1="76" x2="180" y2="76"/><polygon class="head" points="186,76 178,71 178,81"/>
+        <line class="edge" x1="334" y1="76" x2="364" y2="76"/><polygon class="head" points="370,76 362,71 362,81"/>
+        <line class="edge" x1="518" y1="76" x2="540" y2="76"/><polygon class="head" points="546,76 538,71 538,81"/>
+        <line class="edge" x1="694" y1="76" x2="708" y2="76"/><polygon class="head" points="714,76 706,71 706,81"/>
+
+        <rect class="box block" x="714" y="170" width="148" height="56" rx="6"/>
+        <text class="t" x="788" y="194" text-anchor="middle">Hangs up</text>
+        <text class="s" x="788" y="212" text-anchor="middle">"Remove this number"</text>
+        <polyline class="edge block" points="788,108 788,164"/><polygon class="head block" points="788,170 783,162 793,162"/>
+        <text class="e block" x="796" y="144">sales / spam</text>
+
+        <rect class="box allow" x="546" y="170" width="148" height="56" rx="6"/>
+        <text class="t" x="620" y="194" text-anchor="middle">Rings your iPhone</text>
+        <text class="s" x="620" y="212" text-anchor="middle">as "CallGuard"</text>
+        <polyline class="edge allow" points="740,108 740,136 620,136 620,164"/><polygon class="head allow" points="620,170 615,162 625,162"/>
+        <text class="e allow" x="628" y="128">anything else</text>
+
+        <rect class="box allow" x="370" y="250" width="148" height="44" rx="6"/>
+        <text class="t" x="444" y="270" text-anchor="middle">You pick up</text>
+        <text class="s" x="444" y="285" text-anchor="middle">hear who + why first</text>
+        <rect class="box" x="576" y="250" width="148" height="44" rx="6"/>
+        <text class="t" x="650" y="270" text-anchor="middle">Voicemail</text>
+        <text class="s" x="650" y="285" text-anchor="middle">if you don't answer</text>
+        <polyline class="edge" points="580,226 580,240 444,240 444,244"/><polygon class="head" points="444,250 439,242 449,242"/>
+        <line class="edge" x1="650" y1="226" x2="650" y2="244"/><polygon class="head" points="650,250 645,242 655,242"/>
+      </svg>
+      </div>
+      <figcaption>Everything inside the dashed box is new; the iPhone and US Mobile only get setting changes. CallGuard sends Claude the caller&rsquo;s words twice &mdash; a partial while they are still talking, then the full answer &mdash; so the decision is usually made before they finish. If Claude is unsure or anything fails, the call rings you.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <span class="label">Timing</span>
+    <h2>The decision is made while the caller is still talking</h2>
+    <figure>
+      <div class="scroll">
+      <svg class="tl" viewBox="0 0 880 320" role="img" aria-label="Two timelines of the same fifteen second call. Before: CallGuard waited for the caller to finish before asking Claude, so the four to eleven second check ran past the decision point, leaving dead air and sometimes timing out. Now: Twilio streams a partial transcript, so the identical check starts five seconds in and finishes before the caller stops, with the verdict ready at the decision point.">
+        <line class="mark" x1="582" y1="26" x2="582" y2="270"/>
+        <text class="marklab" x="588" y="22">decision point — caller has stopped</text>
+
+        <text class="lane" x="0" y="58">Before</text>
+        <text class="sub" x="0" y="76">ask after</text>
+        <rect class="speech" x="150" y="42" width="360" height="24" rx="4"/>
+        <text class="blab" x="330" y="58" text-anchor="middle">caller talking</text>
+        <rect class="prompt" x="510" y="42" width="72" height="24" rx="4"/>
+        <text class="sub" x="546" y="58" text-anchor="middle">prompt</text>
+        <rect class="wait" x="582" y="42" width="192" height="24" rx="4"/>
+        <text class="blab" x="678" y="58" text-anchor="middle">dead air</text>
+        <rect class="think" x="510" y="78" width="264" height="24" rx="4"/>
+        <text class="blab" x="642" y="94" text-anchor="middle">ask Claude · 4–11s</text>
+        <text class="verdict bad" x="510" y="120">finishes late → caller waits, and can time out</text>
+
+        <text class="lane" x="0" y="184">Now</text>
+        <text class="sub" x="0" y="202">ask during</text>
+        <rect class="speech" x="150" y="168" width="360" height="24" rx="4"/>
+        <text class="blab" x="330" y="184" text-anchor="middle">caller talking</text>
+        <rect class="prompt" x="510" y="168" width="72" height="24" rx="4"/>
+        <text class="sub" x="546" y="184" text-anchor="middle">prompt</text>
+        <rect class="ok" x="582" y="168" width="120" height="24" rx="4"/>
+        <text class="blab" x="642" y="184" text-anchor="middle">rings you</text>
+        <rect class="think" x="270" y="204" width="264" height="24" rx="4"/>
+        <text class="blab" x="402" y="220" text-anchor="middle">ask Claude · 4–11s</text>
+        <line class="mark" x1="270" y1="192" x2="270" y2="204"/>
+        <text class="verdict good" x="270" y="246">partial sent here → done in time, no wait</text>
+
+        <line class="axis" x1="150" y1="282" x2="846" y2="282"/>
+        <line class="axis" x1="150" y1="282" x2="150" y2="288"/>
+        <text class="tick" x="150" y="304" text-anchor="middle">0s</text>
+        <line class="axis" x1="246" y1="282" x2="246" y2="288"/>
+        <text class="tick" x="246" y="304" text-anchor="middle">4s</text>
+        <line class="axis" x1="342" y1="282" x2="342" y2="288"/>
+        <text class="tick" x="342" y="304" text-anchor="middle">8s</text>
+        <line class="axis" x1="438" y1="282" x2="438" y2="288"/>
+        <text class="tick" x="438" y="304" text-anchor="middle">12s</text>
+        <line class="axis" x1="534" y1="282" x2="534" y2="288"/>
+        <text class="tick" x="534" y="304" text-anchor="middle">16s</text>
+        <line class="axis" x1="630" y1="282" x2="630" y2="288"/>
+        <text class="tick" x="630" y="304" text-anchor="middle">20s</text>
+        <line class="axis" x1="726" y1="282" x2="726" y2="288"/>
+        <text class="tick" x="726" y="304" text-anchor="middle">24s</text>
+        <line class="axis" x1="822" y1="282" x2="822" y2="288"/>
+        <text class="tick" x="822" y="304" text-anchor="middle">28s</text>
+      </svg>
+      </div>
+      <figcaption>The blue bar is the same amount of work in both rows &mdash; it just starts earlier. Twilio streams a rough transcript while the caller is still speaking, so once they have said about a dozen words CallGuard can start checking. The check has to finish left of the dashed line; in the old order it often didn&rsquo;t, and a call that misses the deadline rings through. Sales calls talk the longest, so the calls that took longest to judge are the ones that now get the biggest head start.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <span class="label">Step by step</span>
+    <h2>What changes at each step</h2>
+    <div class="tablebox">
+      <table>
+        <tr><th>Step</th><th>Before (Apple)</th><th>After (CallGuard)</th></tr>
+        <tr><td>1 · Call arrives</td><td>iPhone answers with Apple's screener</td><td>iPhone silences it; US Mobile forwards it to your Twilio number</td></tr>
+        <tr><td>2 · The question</td><td>Apple asks for name and reason</td><td>CallGuard asks for name and reason, and asks once more if the caller stays silent</td></tr>
+        <tr><td>3 · Deciding</td><td>You read the transcript and decide</td><td>Claude checks the answer against <code>rules.md</code>, starting while the caller is still talking so the verdict is ready when they stop</td></tr>
+        <tr><td>4 · Sales or spam</td><td>Your phone rings anyway</td><td>A polite goodbye, then CallGuard hangs up. Your phone stays quiet.</td></tr>
+        <tr><td>5 · A real call</td><td>You answer after reading the transcript</td><td>Rings you as "CallGuard"; when you pick up, you first hear e.g. "Dr. Patel's office about tomorrow"</td></tr>
+        <tr><td>6 · You miss it</td><td>US Mobile voicemail</td><td>CallGuard voicemail, listed on your call log page</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="label">Setup</span>
+    <h2>Going live</h2>
+    <ol class="steps">
+      <li><div><h3>Create three accounts</h3><p>A paid Twilio account with one local number, an Anthropic API key, and Fly.io for hosting.</p></div></li>
+      <li><div><h3>Deploy the server</h3><p><code>fly deploy</code>, then point the Twilio number's incoming-call webhook at <code>https://&lt;app&gt;.fly.dev/voice</code>.</p></div></li>
+      <li><div><h3>Change two iPhone settings</h3><p>Save the Twilio number as a contact named "CallGuard". Set Settings → Apps → Phone → Screen Unknown Callers to <b>Silence</b>.</p></div></li>
+      <li><div><h3>Dial the forwarding codes</h3><p>Lightspeed uses standard GSM codes. Replace <span class="mono">1XXXXXXXXXX</span> with the Twilio number.</p>
+        <div class="codes">
+          <code>**67*1XXXXXXXXXX#</code><span class="muted">busy or declined (silenced calls)</span>
+          <code>**61*1XXXXXXXXXX**30#</code><span class="muted">no answer after 30 seconds</span>
+          <code>**62*1XXXXXXXXXX#</code><span class="muted">phone off or no signal</span>
+          <code>##004#</code><span class="muted">undo all of the above</span>
+        </div></div></li>
+      <li><div><h3>Test in shadow mode, then turn on blocking</h3><p>Shadow mode rings you on every call but tells you what it would have blocked. After a few clean days: <code>fly secrets set SCREEN_MODE=enforce</code>.</p></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <span class="label">Trade-offs</span>
+    <h2>What to expect</h2>
+    <div class="grid2">
+      <div><h3>Usually no extra wait</h3><p class="muted">The check runs while the caller is still speaking, so anyone who talks for more than about five seconds costs you nothing. Very short answers still add a few seconds.</p></div>
+      <div><h3>Shows as "CallGuard"</h3><p class="muted">Calls that get through show the Twilio number, not the caller's. The spoken summary and the log tell you who it was.</p></div>
+      <div><h3>Missed contacts are screened too</h3><p class="muted">Carrier forwarding can't tell contacts apart. Real people get through, then reach CallGuard's voicemail.</p></div>
+      <div><h3>Errors ring you</h3><p class="muted">If Claude times out or the server restarts mid-call, the call comes through. The one exception: if the early check already decided &ldquo;spam&rdquo; after hearing 30 words or more, that verdict stands.</p></div>
+      <div><h3>A few dollars a month</h3><p class="muted">About $1.15 for the Twilio number, $2–3 for hosting, plus a few cents per screened call.</p></div>
+      <div><h3>Rules in plain English</h3><p class="muted">Edit <code>rules.md</code> to change what gets blocked, then redeploy.</p></div>
+    </div>
+  </section>
+
+  <footer>Built with Python (FastAPI), Twilio Voice and Claude Opus 5. Project files: <span class="mono">app.py · classifier.py · rules.md · tests/ · Dockerfile · fly.toml · README.md</span></footer>
+</div>
