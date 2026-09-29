@@ -23,11 +23,14 @@ whisper summary; no answer: voicemail.
 - `test_silence.py`: places a call from the Twilio number to time carrier forwarding.
 - `try_classifier.py`: runs sample transcripts through the real classifier.
 - Tests: `.venv/bin/pytest -q` (they sign fake Twilio requests).
+- `fallback/`: Twilio Function set as the number's "Primary handler fails" URL. If the server
+  is down it rings the owner unscreened (same loop guard), then voicemail in Twilio.
+  `deploy_fallback.py` (re)deploys it; run it where the Twilio secrets are (the Fly machine).
 - `fly.toml` has a placeholder app name; deploy with `fly deploy -a <app>`.
 
 ## Design rules (keep these)
 - Never hang up because of our own error: every failure path rings the owner
-  (`Verdict.fail_open`).
+  (`Verdict.fail_open`); if the server itself is down, the Twilio fallback rings the owner.
 - Loop guard: a call coming *from* the Twilio number or the owner's cell is
   `<Reject reason="busy">` so a declined `<Dial>` falls through to voicemail instead of looping.
 - `RING_SECONDS` (20) must stay shorter than the carrier no-answer timer (30s).

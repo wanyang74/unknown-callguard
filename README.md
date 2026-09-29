@@ -66,6 +66,14 @@ Twilio Console → Phone Numbers → your number → **Voice configuration** →
    To check a code: `*#67#`. To turn all of them off and go back to US Mobile voicemail: `##004#`.
    If a code fails, ask US Mobile support to enable conditional call forwarding on your line.
 
+## 4b. Add a backup for when the server is down (recommended)
+`fallback/fallback.js` is a Twilio Function that rings your cell unscreened (then takes a
+voicemail) if CallGuard doesn't answer Twilio. Deploy it and attach it as the number's
+"Primary handler fails" URL by running, wherever your Twilio secrets are set:
+```bash
+python fallback/deploy_fallback.py <your Account SID> fallback/fallback.js
+```
+
 ## 5. Test it, then turn on blocking
 Call yourself from a number that isn't in your contacts (a friend's phone, Google Voice):
 - Pitch solar: in `shadow` mode it still rings you, and the summary says "Would have been blocked as sales".
