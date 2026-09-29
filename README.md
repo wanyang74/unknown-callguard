@@ -24,9 +24,9 @@ Unknown caller → iPhone silences it → US Mobile forwards it → Twilio numbe
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/pytest -q
-ANTHROPIC_API_KEY=sk-ant-... .venv/bin/python try_classifier.py
+ANTHROPIC_API_KEY=sk-ant-... .venv/bin/python -m scripts.try_classifier
 ```
-`try_classifier.py` runs sample transcripts and prints each decision and how long it took.
+`scripts/try_classifier.py` runs sample transcripts and prints each decision and how long it took.
 Edit `rules.md` until you like the results.
 
 ## 2. Deploy to Fly.io

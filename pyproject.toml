@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+# Tests import the callguard package from the repo root.
+pythonpath = ["."]
+testpaths = ["tests"]

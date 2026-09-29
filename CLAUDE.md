@@ -13,16 +13,23 @@ a Twilio number → Twilio webhooks to this FastAPI app → caller is asked for 
 goodbye + hang up; allow: `<Dial>` the owner's cell with caller ID = Twilio number and a
 whisper summary; no answer: voicemail.
 
-- `app.py`: webhooks `/voice` → `/screen` → `/decide` → `/whisper`, `/dial-done`, `/voicemail`;
-  call log page `/calls?token=ADMIN_TOKEN` (filters: decision, real vs test calls — test
-  phones are the `TEST_NUMBERS` secret, comma-separated E.164); SQLite log.
+Code layout (`callguard/` package; run with `python -m callguard`):
+- `app.py`: `create_app` wires everything together, plus `/health`.
+- `call_flow.py`: Twilio webhooks `/voice` → `/partial` → `/screen` → `/decide` → `/whisper`,
+  `/dial-done`, `/voicemail`.
+- `review.py`: call log page `/calls?token=ADMIN_TOKEN` and `/flag` (filters: decision, real vs
+  test calls — test phones are the `TEST_NUMBERS` secret, comma-separated E.164).
+- `config.py` (`Settings` from env vars), `calllog.py` (SQLite log), `state.py` (per-call state).
 - `classifier.py`: Claude call with structured JSON output, effort low. Fails open (rings the
   owner) on any error or timeout.
 - Rules: `rules.md` is a public example; real rules go in `rules.local.md`, which is used
   when present. It is gitignored but still shipped to the server (see `.dockerignore`).
-- `test_silence.py`: places a call from the Twilio number to time carrier forwarding.
-- `try_classifier.py`: runs sample transcripts through the real classifier.
-- Tests: `.venv/bin/pytest -q` (they sign fake Twilio requests).
+- `scripts/test_silence.py`: places a call from the Twilio number to time carrier forwarding.
+- `scripts/try_classifier.py`: runs sample transcripts through the real classifier
+  (`python -m scripts.try_classifier`).
+- `docs/callguard.html`: explainer page.
+- Tests: `.venv/bin/pytest -q` (config in `pyproject.toml`). `tests/helpers.py` signs fake
+  Twilio requests; `test_call_flow.py` covers the webhooks, `test_review.py` the log page.
 - `fallback/`: Twilio Function set as the number's "Primary handler fails" URL. If the server
   is down it rings the owner unscreened (same loop guard), then voicemail in Twilio.
   `deploy_fallback.py` (re)deploys it; run it where the Twilio secrets are (the Fly machine).

@@ -1,68 +1,13 @@
+"""Twilio webhook flow: greeting, classification, blocking, ringing, voicemail."""
+
 import asyncio
-import sys
-from pathlib import Path
-from urllib.parse import urlencode
 
-import pytest
 from fastapi.testclient import TestClient
-from twilio.request_validator import RequestValidator
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from app import Settings, create_app  # noqa: E402
-from classifier import Verdict  # noqa: E402
-
-BASE = "https://callguard.example.com"
-TOKEN = "test-auth-token"
-TWILIO_NUM, CELL, SPAMMER = "+15550000001", "+15550000002", "+15559999999"
-
-
-class FakeClassifier:
-    def __init__(self, verdict: Verdict, delay: float = 0):
-        self.verdict, self.delay, self.seen = verdict, delay, []
-
-    async def classify(self, transcript, from_number):
-        self.seen.append(transcript)
-        await asyncio.sleep(self.delay)
-        # A list of verdicts is returned one per call, in order.
-        return self.verdict.pop(0) if isinstance(self.verdict, list) else self.verdict
-
-
-@pytest.fixture
-def make(tmp_path):
-    clients = []
-
-    def _make(verdict, mode="enforce", delay=0):
-        s = Settings(twilio_auth_token=TOKEN, twilio_number=TWILIO_NUM, my_cell=CELL,
-                     public_base_url=BASE, admin_token="admin", owner_name="Sam",
-                     mode=mode, db_path=str(tmp_path / "calls.db"), classify_timeout_s=0.5)
-        fake = FakeClassifier(verdict, delay)
-        # Entering the client keeps one event loop across requests, like uvicorn does,
-        # so the classification task started in /screen survives until /decide.
-        client = TestClient(create_app(s, fake)).__enter__()
-        clients.append(client)
-        return client, fake
-
-    yield _make
-    for c in clients:
-        c.__exit__(None, None, None)
-
-
-def post(client, path, **params):
-    sig = RequestValidator(TOKEN).compute_signature(BASE + path, params)
-    return client.post(path, content=urlencode(params),
-                       headers={"X-Twilio-Signature": sig,
-                                "Content-Type": "application/x-www-form-urlencoded"})
-
-
-def run_call(client, said):
-    assert post(client, "/voice", CallSid="CA1", From=SPAMMER).status_code == 200
-    r = post(client, "/screen", CallSid="CA1", From=SPAMMER, SpeechResult=said, Confidence="0.9")
-    assert "/decide" in r.text
-    return post(client, "/decide", CallSid="CA1", From=SPAMMER)
-
-
-SALES = Verdict("block", "sales", "Mike from SunPower", "Solar panel offer.")
-DOCTOR = Verdict("allow", "medical", "Dr. Lee's office", "Dr. Lee's office about your appointment.")
+from callguard.app import create_app
+from callguard.classifier import Verdict
+from callguard.config import Settings
+from helpers import BASE, CELL, DOCTOR, SALES, SPAMMER, TOKEN, TWILIO_NUM, post, run_call
 
 
 def test_rejects_unsigned_requests(make):
@@ -293,103 +238,3 @@ def test_long_partial_allow_is_used_on_timeout(make, tmp_path):
         row = client.app.state.callguard.calls.get("CA1")
         assert row["decision"] == "allow" and row["error"] == "timeout_partial_verdict"
         assert "appointment" in row["summary"]
-
-
-# --- review page -------------------------------------------------------------------
-
-def page(client, **qs):
-    q = "&".join(f"{k}={v}" for k, v in qs.items())
-    return client.get(f"/calls?token=admin&{q}")
-
-
-def test_calls_page_shows_reason_and_confidence(make):
-    client, _ = make(SALES)
-    run_call(client, "solar panels for your home today")
-    r = page(client)
-    assert "Solar panel offer." in r.text      # the summary column
-    assert "0.90" in r.text                     # Twilio confidence
-    assert "mark wrong" in r.text
-
-
-def test_calls_page_shows_pacific_time(make):
-    client, _ = make(SALES)
-    run_call(client, "solar panels")
-    client.app.state.callguard.calls.upsert("CA1", ts=1790000000)  # 2026-09-21 14:13 UTC
-    assert "Sep 21 07:13 PDT" in page(client).text
-
-
-def test_calls_page_filters_by_decision(make):
-    client, _ = make(SALES)
-    run_call(client, "solar panels")
-    assert "solar panels" in page(client, decision="block").text
-    assert "solar panels" not in page(client, decision="allow").text
-
-
-def test_calls_page_filters_test_numbers(make):
-    client, _ = make(SALES)
-    client.app.state.callguard.settings.test_numbers = ("+14085550100",)
-    post(client, "/voice", CallSid="CA1", From=SPAMMER)
-    post(client, "/voice", CallSid="CA2", From="+14085550100")
-    assert SPAMMER not in page(client, source="test").text
-    assert "+14085550100" in page(client, source="test").text
-    real = page(client, source="real").text
-    assert SPAMMER in real and "+14085550100" not in real
-    assert "<span class=tag>test</span>" in page(client).text
-
-
-def test_real_filter_without_test_numbers_shows_everything(make):
-    client, _ = make(SALES)
-    post(client, "/voice", CallSid="CA1", From=SPAMMER)
-    assert SPAMMER in page(client, source="real").text
-    assert SPAMMER not in page(client, source="test").text
-
-
-def test_flag_keeps_page_filters(make):
-    client, _ = make(SALES)
-    run_call(client, "solar panels")
-    r = client.post("/flag", data={"token": "admin", "sid": "CA1", "wrong": "1",
-                                   "back": "decision=block&source=real"}, follow_redirects=False)
-    assert r.headers["location"].endswith("&decision=block&source=real")
-
-
-def test_flag_requires_admin_token(make):
-    client, _ = make(SALES)
-    run_call(client, "solar panels")
-    assert client.post("/flag", data={"token": "nope", "sid": "CA1", "wrong": "1"}).status_code == 404
-
-
-def test_flag_marks_and_unmarks_a_verdict(make):
-    client, _ = make(SALES)
-    run_call(client, "solar panels")
-    r = client.post("/flag", data={"token": "admin", "sid": "CA1", "wrong": "1"},
-                    follow_redirects=False)
-    assert r.status_code == 303
-    assert client.app.state.callguard.calls.get("CA1")["wrong"] == 1
-    assert "1 marked wrong" in page(client).text
-    client.post("/flag", data={"token": "admin", "sid": "CA1", "wrong": "0"},
-                follow_redirects=False)
-    assert client.app.state.callguard.calls.get("CA1")["wrong"] == 0
-
-
-def test_low_confidence_is_highlighted(make):
-    client, _ = make(SALES)
-    post(client, "/voice", CallSid="CA1", From=SPAMMER)
-    post(client, "/screen", CallSid="CA1", From=SPAMMER, SpeechResult="mumble", Confidence="0.31")
-    post(client, "/decide", CallSid="CA1", From=SPAMMER)
-    assert 'class="lo">0.31' in page(client).text
-
-
-def test_wrong_column_added_to_existing_db(tmp_path):
-    # A database created before the review flag existed must still open.
-    import sqlite3
-    from app import CallLog
-    db = tmp_path / "old.db"
-    old = sqlite3.connect(db)
-    old.execute("CREATE TABLE calls (sid TEXT PRIMARY KEY, ts REAL, from_number TEXT, "
-                "transcript TEXT, confidence REAL, decision TEXT, category TEXT, caller TEXT, "
-                "summary TEXT, mode TEXT, error TEXT, outcome TEXT, recording_url TEXT)")
-    old.execute("INSERT INTO calls (sid, decision) VALUES ('OLD1', 'block')")
-    old.commit(); old.close()
-    log = CallLog(str(db))
-    assert log.get("OLD1")["wrong"] == 0
-    assert log.counts()["block"] == 1

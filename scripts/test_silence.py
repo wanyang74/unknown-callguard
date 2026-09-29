@@ -5,9 +5,9 @@ something (US Mobile voicemail) answers. No server needed; run it from your lapt
 
     export TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... \
            TWILIO_NUMBER=+1XXXXXXXXXX MY_CELL=+1YYYYYYYYYY
-    python test_silence.py silence       # Screen Unknown Callers = Silence, don't touch the phone
-    python test_silence.py decline       # baseline: setting = Never, tap Decline when it rings
-    python test_silence.py ignore        # baseline: setting = Never, let it ring, don't touch
+    python scripts/test_silence.py silence       # Screen Unknown Callers = Silence, don't touch the phone
+    python scripts/test_silence.py decline       # baseline: setting = Never, tap Decline when it rings
+    python scripts/test_silence.py ignore        # baseline: setting = Never, let it ring, don't touch
 
 Keep the Twilio number OUT of your contacts, and don't call or text it from your iPhone,
 or iOS will treat it as known and let it ring.

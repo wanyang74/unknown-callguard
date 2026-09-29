@@ -5,7 +5,7 @@ exports.handler = function (context, event, callback) {
   const twiml = new Twilio.twiml.VoiceResponse();
   const voice = { voice: 'Polly.Salli-Neural' };
 
-  // Loop guard, same as app.py: our own Dial to the cell was declined and the carrier
+  // Loop guard, same as callguard/call_flow.py: our own Dial to the cell was declined and the carrier
   // forwarded it back here. Reject so that Dial sees "busy" and goes to voicemail.
   if (event.From === context.MY_CELL || event.From === context.TWILIO_NUMBER) {
     twiml.reject({ reason: 'busy' });

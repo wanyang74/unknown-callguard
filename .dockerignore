@@ -7,5 +7,8 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 tests/
+scripts/
+docs/
+fallback/
 CLAUDE.md
 CLAUDE.local.md

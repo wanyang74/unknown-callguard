@@ -1,7 +1,7 @@
 """Run a few sample transcripts through the real classifier (needs ANTHROPIC_API_KEY).
 
-    python try_classifier.py
-    python try_classifier.py "Hi, this is Sam from Chase about a charge on your card"
+    python -m scripts.try_classifier
+    python -m scripts.try_classifier "Hi, this is Sam from Chase about a charge on your card"
 """
 
 import asyncio
@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from classifier import Classifier, default_rules_path
+from callguard.classifier import Classifier, default_rules_path
 
 SAMPLES = [
     "Hi, this is Mike with SunPower, we're offering free solar consultations in your area.",
